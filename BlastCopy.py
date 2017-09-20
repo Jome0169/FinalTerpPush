@@ -1,4 +1,5 @@
 import getopt
+import matplotlib.pyplot as plt
 import sys
 import os
 import re
@@ -49,7 +50,6 @@ def AppendGenesToScafDict(DictScaf, BlastLines):
 
     for line in BlastLines:
         DictScaf[line[3]].append(line)
-
     return DictScaf
 
 def FilterRedunDict(arg1):
@@ -76,14 +76,64 @@ def FilterRedunDict(arg1):
     return FilteredDict
 
 
+
+
+def CreateQuickHistogram(CountData):
+    """Creats a quick histogram of count data when i need it like right nwp
+
+    :CountData: TODO
+    :returns: TODO
+
+    """
+    plt.hist(CountData)
+    plt.show
+
+
+
 def FilterForIdentical(NestedDict):
 
-    GeneRanges = {}
-    for gene, listofhits in NestedDict.iteritems():
-        ScaffPosition = []
-        for blast in listofhits:
-            ScaffPosition.append([])
-            
+    RangesFound = {}
+    for key, value in NestedDict.iteritems():
+        AllVals = []
+        for exon in value:
+            AllVals.append(int(exon[4]))
+            AllVals.append(int(exon[5]))
+        Min = min(AllVals)
+        Max = max(AllVals)
+        Difference = Max-Min
+        CreatedRange = [Min,Max.Difference]
+        RangesFound[key] = CreatedRange
+
+    FindScaffoldOverlap(RangesFound)
+
+
+
+def FindScaffoldOverlap(DicionaryRegions):
+    """TODO: Docstring for FindScaffoldOverlap.
+
+    :DicionaryRegions: TODO
+    :returns: TODO
+
+    """
+    for genename, range1 in DicionaryRegions.iteritems():
+        for samename, range2 in DicionaryRegions.iteritems():
+            if samename == genename:
+                pass
+            else:
+               Rrange1 = range(range1[0],range1[1])
+               Rrange2 = range(range2[0],range2[1])
+               Set1 = set(Rrange1)
+
+               print "Gene!"
+               print genename
+               print range1
+               print "Gene2"
+               print samename
+               print range1 
+               print "LenOverlap "
+               OvLap = Set1.intersection(Rrange2)
+               print len(OvLap)
+               print'\n'
 
 
 
@@ -122,18 +172,27 @@ def main():
 
     if Iflag == None:
         print "Need Input metric file from picard tools"
+        usage()
+        sys.exit(2)
     elif Oflag == None:
         print "Need output file base name to write to "
+        usage()
+        sys.exit(2)
 
     StartTime = datetime.now()
 
     #Function Calls
+    GeneLenFreq = []
     ReadInBlast = OpenAndParseBlase(Iflag)
     ScaffoldDict = CreatelistOfDicts(ReadInBlast)
     AppenededGenes = AppendGenesToScafDict(ScaffoldDict, ReadInBlast)
     Z = FilterRedunDict(AppenededGenes)
     for Scaf, GeneDic in Z.iteritems():
-        FilterForIdentical(GeneDic)
+        BasiCount = FilterForIdentical(GeneDic)
+        GeneLenFreq.append(BasiCount)
+    
+    
+    
 
     
     #Speed Things
