@@ -1,86 +1,58 @@
-#import getopt
-import sys
-import os
-import re
-from operator import itemgetter
-from datetime import datetime
-
-
-import dnaplotlib as dpl
-dr = dpl.DNARenderer()
+"""The purpose of this file is to Draw isolated possibly fractioned
+    genes from the same proteins. This has been done during the terpenoid
+    project headed by Pablo Mendieta and Erin Colier Zans"""
+    
+from Bio.SeqFeature import SeqFeature, FeatureLocation
+from Bio.Graphics import GenomeDiagram
+from reportlab.lib.units import cm
 
 
 
 
-def BlastParser(BlastFile):
-    """TODO: Docstring for BlastParser.
+def DrawGenes(DictOfProt, OutputFlag):
+    """Function that creates bins based off number of genes 
 
-    :BlastFile: TODO
+    :arg1: TODO
     :returns: TODO
 
     """
-    ReturnedBlastFile = {}
-
-    with open(BlastFile, 'r') as f:
-        for line in f:
-            Cleaned_Line = line.strip.split('\t')
-
-
+    StartEnd = []
+    for genename, BlastList in DictOfProt.iteritems():
+        StartEnd.append(BlastList[0][4])
+        StartEnd.append(BlastList[-1][5])
+        CreateRanges(BlastList)
 
 
-def usage():
-    print "The purpose of this file is to Draw isolated possibly fractioned
-    genes from the same proteins. This has been done during the terpenoid
-    project headed by Pablo Mendieta and Erin Colier Zans"
+
+    gdd = GenomeDiagram.Diagram('Test Diagram')
+    gdt_features = gdd.new_track(1, greytrack=False)
+    gds_features = gdt_features.new_set()
+   
+    for genename, BlastList in DictOfProt.iteritems():
+        for item in BlastList:
+            feature = SeqFeature(FeatureLocation(int(item[4]),int(item[5])), strand=None)
+            gds_features.add_feature(feature, name="Strandless", label=True)
+
+    #Add three features to show the strand options,
+    #feature = SeqFeature(FeatureLocation(25, 125), strand=+1)
+    #gds_features.add_feature(feature, name="Forward", label=True)
+    #feature = SeqFeature(FeatureLocation(150, 250), strand=None)
+    #gds_features.add_feature(feature, name="Strandless", label=True)
+    #feature = SeqFeature(FeatureLocation(275, 375), strand=-1)
+    #gds_features.add_feature(feature, name="Reverse", label=True)
+
     
-
-
-def main():
-
-    Iflag = None
-    Oflag = None
-
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "i:o:h", ["input", "output", "help"])
-
-    except getopt.GetoptError:
-        usage()
-        sys.exit(2)
-
-    for opt, arg in opts:
-       if opt in ("-i", "-input"):
-           Iflag = arg
-       elif opt in ("-o", "-output"):
-           Oflag = arg
-       elif opt in  ("-h", "-help"):
-           usage()
-           sys.exit(2)
-       else:
-           print "Unhandeled options %s" % (otps)
-
-
-    if Iflag == None:
-        print "Need Input metric file from picard tools"
-    elif Oflag == None:
-        print "Need output file base name to write to "
-
-    StartTime = datetime.now()
-
-    #Function Calls
-    List1 = OpenFile(Iflag)
-    Final = sortoutput(List1)
-    WriteToFile(Oflag, Iflag, Final)
+    gdd.draw(format='linear', pagesize=(30*cm,4*cm), fragments=1,
+                     start=int(StartEnd[0]), end=int(StartEnd[1]))
     
-    #Speed Things
-    EndTime = datetime.now()
-    FinalTime = EndTime - StartTime
-
-    print "Total Time %s" % (FinalTime)
-
-if __name__=="__main__":
-    main()
+    Outputname = str(OutputFlag) + ".pdf"
+    gdd.write(Outputname, "pdf")
 
 
-
+def CreateRanges(ListofBlast):
+    for item in ListofBlast:
+        print item
+  
+    
 
 

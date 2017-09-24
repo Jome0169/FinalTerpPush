@@ -1,10 +1,10 @@
 import getopt
-import matplotlib.pyplot as plt
 import sys
 import os
 import re
 from operator import itemgetter
 from datetime import datetime
+from DrawGenes import *
 
 
 
@@ -78,21 +78,10 @@ def FilterRedunDict(arg1):
 
 
 
-def CreateQuickHistogram(CountData):
-    """Creats a quick histogram of count data when i need it like right nwp
-
-    :CountData: TODO
-    :returns: TODO
-
-    """
-    plt.hist(CountData)
-    plt.show
-
-
-
 def FilterForIdentical(NestedDict):
 
     RangesFound = {}
+
     for key, value in NestedDict.iteritems():
         AllVals = []
         for exon in value:
@@ -100,12 +89,41 @@ def FilterForIdentical(NestedDict):
             AllVals.append(int(exon[5]))
         Min = min(AllVals)
         Max = max(AllVals)
-        Difference = Max-Min
-        CreatedRange = [Min,Max.Difference]
+        Difference = int(Max) - int(Min)
+        CreatedRange = [Min,Max,Difference]
         RangesFound[key] = CreatedRange
+    
+    #THis is a function call to the function below, non nested cause looks bad
+    GoodGeneNames = FindScaffoldOverlap(RangesFound)
+    FastSet = set(GoodGeneNames)
 
-    FindScaffoldOverlap(RangesFound)
+    FinalDict = {} 
+    #Remove non Passing list
+    for key, value in NestedDict.iteritems():
+        if key in FastSet:
+            FinalDict[key] = value
+            NewSort = sorted(value, key = lambda x: int(x[4]))
+            FinalDict[key] = NewSort
+    
+    #Compare Average Bit scores
+    QScoreStorage = {}
+    for key, value in FinalDict.iteritems():
+        QQ = TakeAverageBitScore(value)
+        QScoreStorage[key] = QQ
 
+    maximum = max(QScoreStorage, key=QScoreStorage.get)
+
+    BestHit =  {}
+
+    for genename, blastscore in FinalDict.iteritems():
+        if genename == maximum:
+            BestHit[genename] = blastscore
+
+    return BestHit
+
+
+
+    
 
 
 def FindScaffoldOverlap(DicionaryRegions):
@@ -115,25 +133,47 @@ def FindScaffoldOverlap(DicionaryRegions):
     :returns: TODO
 
     """
+    RemoveGenesNameStorage = []
+    KeepMe = []
     for genename, range1 in DicionaryRegions.iteritems():
         for samename, range2 in DicionaryRegions.iteritems():
             if samename == genename:
                 pass
             else:
-               Rrange1 = range(range1[0],range1[1])
-               Rrange2 = range(range2[0],range2[1])
-               Set1 = set(Rrange1)
+                Rrange1 = range(range1[0],range1[1])
+                Rrange2 = range(range2[0],range2[1])
+                Set1 = set(Rrange1)
+                OvLap = Set1.intersection(Rrange2)
+                if range1[2] > range2[2]:
+                    RemoveGenesNameStorage.append(samename)
+                elif range1[2] < range2[2]:
+                    RemoveGenesNameStorage.append(genename)
 
-               print "Gene!"
-               print genename
-               print range1
-               print "Gene2"
-               print samename
-               print range1 
-               print "LenOverlap "
-               OvLap = Set1.intersection(Rrange2)
-               print len(OvLap)
-               print'\n'
+    TestSet = set(RemoveGenesNameStorage)
+    for genename, range1 in DicionaryRegions.iteritems():
+        if genename not in TestSet:
+            KeepMe.append(genename)
+    return KeepMe
+
+
+def TakeAverageBitScore(LisofBlast):
+    """takes in a list of blast values and returns the average bit score value.
+    Higher is better, and it is an attempt to ID terp regions we are the most
+    certain about
+
+    :LisofBlast: TODO
+    :returns: TODO
+
+    """
+    FinalValue = 0
+    TotalNum = len(LisofBlast)
+
+
+    for item in LisofBlast:
+        FinalValue += float(item[7])
+
+    AvgBitScore = (float(FinalValue) / float(TotalNum))
+    return AvgBitScore
 
 
 
@@ -188,8 +228,9 @@ def main():
     AppenededGenes = AppendGenesToScafDict(ScaffoldDict, ReadInBlast)
     Z = FilterRedunDict(AppenededGenes)
     for Scaf, GeneDic in Z.iteritems():
+        #Below is the variable containing the final set of good location values
         BasiCount = FilterForIdentical(GeneDic)
-        GeneLenFreq.append(BasiCount)
+        DrawGenes(BasiCount, Oflag)
     
     
     
